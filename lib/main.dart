@@ -1,18 +1,36 @@
-import 'package:eds_test/presentation/main_page.dart';
+import 'package:eds_test/data/repositories/user_repository.dart';
+import 'package:eds_test/data/repositories/user_repository_impl.dart';
+import 'package:eds_test/domain/user_interactor.dart';
+import 'package:eds_test/domain/user_interactor_impl.dart';
+import 'package:eds_test/presentation/pages/home_page.dart';
+import 'package:eds_test/logic/home/home_store.dart';
+import 'package:eds_test/logic/post_detail/post_detail_store.dart';
+import 'package:eds_test/logic/user/user_store.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 Future<void> main() async {
-  runApp(const MyApp());
-}
+  final UserRepository userRepository = UserRepositoryImpl();
+  final UserInteractor userInteractor = UserInteractorImpl(userRepository);
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Test Task Application',
-      home: MainPage(),
-    );
-  }
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider<HomeStore>(
+          create: (_) => HomeStore(userInteractor),
+        ),
+        Provider<UserStore>(
+          create: (_) => UserStore(userInteractor),
+        ),
+        Provider<PostDetailStore>(
+          create: (_) => PostDetailStore(userInteractor),
+        ),
+      ],
+      child: const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Test Task Application',
+        home: HomePage(),
+      ),
+    ),
+  );
 }

@@ -1,5 +1,6 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:eds_test/data/models/album_model.dart';
+import 'package:eds_test/presentation/shared_widgets/loader.dart';
 import 'package:eds_test/presentation/theme/app_colors.dart';
 import 'package:eds_test/presentation/theme/app_text_styles.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,7 @@ class AlbumDetailPage extends StatelessWidget {
       ),
       body: Center(
         child: CarouselSlider.builder(
+          options: CarouselOptions(height: 400),
           itemCount: album.photos.length,
           itemBuilder: (context, index, _) {
             return Padding(
@@ -41,7 +43,6 @@ class AlbumDetailPage extends StatelessWidget {
               ),
             );
           },
-          options: CarouselOptions(height: 400),
         ),
       ),
     );

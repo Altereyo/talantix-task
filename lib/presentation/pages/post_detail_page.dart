@@ -1,19 +1,20 @@
-import 'package:eds_test/data/models/comment_model.dart';
 import 'package:eds_test/data/models/post_model.dart';
-import 'package:eds_test/data/services/api_service.dart';
+import 'package:eds_test/logic/post_detail/post_detail_store.dart';
 import 'package:eds_test/presentation/shared_widgets/comment_card.dart';
 import 'package:eds_test/presentation/shared_widgets/custom_text_field.dart';
 import 'package:eds_test/presentation/shared_widgets/loader.dart';
 import 'package:eds_test/presentation/theme/app_colors.dart';
 import 'package:eds_test/presentation/theme/app_text_styles.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:provider/provider.dart';
 
 class PostDetailPage extends StatefulWidget {
   final PostModel post;
 
   const PostDetailPage({
-    required this.post,
     Key? key,
+    required this.post,
   }) : super(key: key);
 
   @override
@@ -21,23 +22,9 @@ class PostDetailPage extends StatefulWidget {
 }
 
 class _PostDetailPageState extends State<PostDetailPage> {
-  List<CommentModel> comments = List.empty();
-  bool _isLoading = true;
   TextEditingController nameController = TextEditingController();
   TextEditingController emailController = TextEditingController();
   TextEditingController commentController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      comments = await ApiService.getCommentsByPostId(widget.post.id);
-      setState(() {
-        _isLoading = false;
-        comments = comments;
-      });
-    });
-  }
 
   void _clearText() {
     nameController.clear();
@@ -53,7 +40,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     super.dispose();
   }
 
-  Future<void> _displayDialog(BuildContext context) async {
+  Future<void> _displayDialog(BuildContext context, PostDetailStore store) async {
     return showDialog(
       context: context,
       builder: (context) {
@@ -66,9 +53,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
               width: MediaQuery.of(context).size.width * 0.45,
               child: Column(
                 children: [
-                  const SizedBox(
-                    height: 20,
-                  ),
+                  const SizedBox(height: 20),
                   CustomTextField(
                     controller: nameController,
                     prefixIcon: const Icon(Icons.person),
@@ -97,7 +82,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
             TextButton(
               child: const Text('Submit'),
               onPressed: () {
-                ApiService.sendComment(
+                store.onSubmit(context,
                   name: nameController.text,
                   email: emailController.text,
                   body: commentController.text,
@@ -114,6 +99,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final store = Provider.of<PostDetailStore>(context)..init(context, widget.post);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.post.title),
@@ -121,53 +108,57 @@ class _PostDetailPageState extends State<PostDetailPage> {
         titleTextStyle: AppTextStyles.title,
         backgroundColor: AppColors.gray,
       ),
-      body: _isLoading
-          ? const Loader()
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Text(
-                  widget.post.title,
-                  style: AppTextStyles.title.copyWith(
-                    color: Colors.black,
-                  ),
-                  textAlign: TextAlign.start,
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  widget.post.body,
-                  style: AppTextStyles.bodyTextStyle.copyWith(
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(
-                  height: 8,
-                ),
-                const Text('Comments:'),
-                const SizedBox(
-                  height: 8,
-                ),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemBuilder: (context, index) {
-                    final comment = comments[index];
-                    return CommentCard(
-                      username: comment.name,
-                      comment: comment.body,
-                      email: comment.email,
-                    );
-                  },
-                  itemCount: comments.length,
-                ),
-              ],
-            ),
+      body: Observer(
+        builder: (context) {
+          return store.isLoading
+              ? const Loader()
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Text(
+                      widget.post.title,
+                      style: AppTextStyles.title.copyWith(
+                        color: Colors.black,
+                      ),
+                      textAlign: TextAlign.start,
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      widget.post.body,
+                      style: AppTextStyles.bodyTextStyle.copyWith(
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 8,
+                    ),
+                    const Text('Comments:'),
+                    const SizedBox(
+                      height: 8,
+                    ),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemBuilder: (context, index) {
+                        final comment = store.comments[index];
+                        return CommentCard(
+                          username: comment.name,
+                          comment: comment.body,
+                          email: comment.email,
+                        );
+                      },
+                      itemCount: store.comments.length,
+                    ),
+                  ],
+                );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(
           Icons.add,
           size: 20,
         ),
-        onPressed: () => _displayDialog(context),
+        onPressed: () => _displayDialog(context, store),
       ),
     );
   }
